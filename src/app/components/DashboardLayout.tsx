@@ -1,12 +1,14 @@
 import { Outlet, Link, useLocation } from 'react-router';
 import { Home, FileText, BarChart3, Plus, Activity } from 'lucide-react';
+import { supabase } from '../../supabaseClient';
 
 export function DashboardLayout() {
   const location = useLocation();
 
   const navItems = [
     { path: '/', icon: Home, label: 'Dashboard' },
-    { path: '/new-claim', icon: Plus, label: 'New Claim' },
+    { path: '/new-claim', icon: Plus, label: 'AI Claim Analysis' },
+    { path: '/manual-entry', icon: FileText, label: 'Manual Entry' },
     { path: '/claims', icon: FileText, label: 'Claims' },
     { path: '/analytics', icon: BarChart3, label: 'Analytics' },
   ];
@@ -59,10 +61,18 @@ export function DashboardLayout() {
         </nav>
 
         <div className="p-4 border-t border-slate-200">
-          <div className="px-4 py-3 bg-slate-50 rounded-lg">
+          <div className="px-4 py-3 bg-slate-50 rounded-lg mb-3">
             <p className="text-xs font-medium text-slate-600">Revenue Cycle Team</p>
             <p className="text-sm font-semibold text-slate-900 mt-1">General Hospital</p>
           </div>
+          <button
+            onClick={async () => {
+              await supabase.auth.signOut();
+            }}
+            className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          >
+            Logout
+          </button>
         </div>
       </aside>
 

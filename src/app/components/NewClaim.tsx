@@ -19,10 +19,9 @@ export function NewClaim() {
   const [extractedData, setExtractedData] = useState<any>(null);
 
   const steps = [
-    { id: 0, name: 'Patient & Document', icon: User },
-    { id: 1, name: 'Extraction & Validation', icon: FileText },
-    { id: 2, name: 'Evidence Collection', icon: Shield },
-    { id: 3, name: 'Review & Submit', icon: Send },
+    { id: 0, name: 'Claim Input', icon: User },
+    { id: 1, name: 'Evidence Review', icon: Shield },
+    { id: 2, name: 'Submission Dashboard', icon: Send },
   ];
 
   const mockPatients = [
@@ -47,7 +46,7 @@ export function NewClaim() {
   const renderStepContent = () => {
     switch (currentStep) {
       case 0:
-        return <Step1PatientDocument 
+        return <Step1Input 
           patients={mockPatients}
           selectedPatient={selectedPatient}
           setSelectedPatient={setSelectedPatient}
@@ -55,11 +54,9 @@ export function NewClaim() {
           handleFileUpload={handleFileUpload}
         />;
       case 1:
-        return <Step2Extraction extractedData={extractedData} />;
+        return <Step2Evidence extractedData={extractedData} />;
       case 2:
-        return <Step3Evidence />;
-      case 3:
-        return <Step4Review />;
+        return <Step3Dashboard />;
       default:
         return null;
     }
@@ -141,10 +138,10 @@ export function NewClaim() {
           </button>
           <button
             onClick={() => setCurrentStep(Math.min(steps.length - 1, currentStep + 1))}
-            disabled={currentStep === steps.length - 1 || (currentStep === 0 && !selectedPatient)}
-            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            disabled={currentStep === steps.length - 1 || (currentStep === 0 && !selectedPatient && !uploadedNote)}
+            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
           >
-            {currentStep === steps.length - 1 ? 'Submit Claim' : 'Next'}
+            {currentStep === 0 ? 'Analyze Claim' : currentStep === steps.length - 1 ? 'Submit Claim' : 'Next'}
             <ChevronRight className="w-5 h-5" />
           </button>
         </div>
@@ -153,7 +150,7 @@ export function NewClaim() {
   );
 }
 
-function Step1PatientDocument({ 
+function Step1Input({ 
   patients, 
   selectedPatient, 
   setSelectedPatient, 
@@ -164,7 +161,7 @@ function Step1PatientDocument({
     <div className="space-y-6">
       {/* Patient Selection */}
       <div className="bg-white rounded-xl p-6 border border-slate-200">
-        <h2 className="text-lg font-semibold text-slate-900 mb-4">Select Patient</h2>
+        <h2 className="text-lg font-semibold text-slate-900 mb-4">1. Select Patient</h2>
         <div className="grid grid-cols-1 gap-3">
           {patients.map((patient: any) => (
             <button
@@ -196,26 +193,48 @@ function Step1PatientDocument({
         </div>
       </div>
 
-      {/* Document Upload */}
+      {/* Document Upload / Paste */}
       <div className="bg-white rounded-xl p-6 border border-slate-200">
         <h2 className="text-lg font-semibold text-slate-900 mb-4">
-          Upload Surgeon's Recommendation Note
+          2. Provide Surgeon's Recommendation Note
         </h2>
+        
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-slate-700 mb-2">Paste Note</label>
+          <textarea 
+            rows={5} 
+            className="w-full p-4 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-slate-900" 
+            placeholder="Paste the surgeon's clinical note here..."
+            onChange={(e) => {
+              if (e.target.value.length > 10) handleFileUpload();
+            }}
+          ></textarea>
+        </div>
+
+        <div className="relative mb-4">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-slate-200" />
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-white text-slate-500">OR</span>
+          </div>
+        </div>
+
         {!uploadedNote ? (
           <div
             onClick={handleFileUpload}
-            className="border-2 border-dashed border-slate-300 rounded-lg p-12 text-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all"
+            className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all"
           >
-            <Upload className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-            <p className="text-slate-600 mb-2">Click to upload or drag and drop</p>
+            <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+            <p className="text-slate-600 mb-1 font-medium">Click to upload document</p>
             <p className="text-sm text-slate-500">PDF, DOC, or TXT (max 10MB)</p>
           </div>
         ) : (
           <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
             <CheckCircle className="w-6 h-6 text-green-600" />
             <div className="flex-1">
-              <p className="font-medium text-green-900">surgeon_note_20240309.pdf</p>
-              <p className="text-sm text-green-700">Uploaded successfully</p>
+              <p className="font-medium text-green-900">Note provided successfully</p>
+              <p className="text-sm text-green-700">Ready for AI analysis</p>
             </div>
           </div>
         )}
@@ -224,24 +243,29 @@ function Step1PatientDocument({
   );
 }
 
-function Step2Extraction({ extractedData }: any) {
-  const policyRules = {
-    requiredDocs: [
-      { name: 'Diagnosis History', status: 'found', details: '2 years on file' },
-      { name: 'X-ray Report', status: 'found', details: 'Dated 2024-01-15' },
-      { name: 'Conservative Treatment Record', status: 'found', details: 'Physical therapy 6 months' },
-      { name: 'Ultrasound Report', status: 'missing', details: 'Required within 90 days' },
-      { name: 'Blood Work Panel', status: 'found', details: 'Dated 2024-02-20' },
+function Step2Evidence({ extractedData }: any) {
+  const ehrData = {
+    diagnosisHistory: [
+      { date: '2022-05-10', diagnosis: 'Knee pain, right', icd10: 'M25.561' },
+      { date: '2023-03-22', diagnosis: 'Osteoarthritis, right knee', icd10: 'M17.11' },
     ],
-    maxApproved: '$15,000',
-    timeline: '5 business days',
+    labs: [
+      { date: '2024-02-20', test: 'Complete Blood Count', result: 'Normal', relevant: true },
+      { date: '2024-02-20', test: 'ESR', result: '18 mm/hr', relevant: true },
+      { date: '2024-01-10', test: 'Lipid Panel', result: 'Normal', relevant: false },
+    ],
+    treatments: [
+      { date: '2023-04-01', treatment: 'Physical Therapy', duration: '6 months', outcome: 'Minimal improvement' },
+      { date: '2023-10-15', treatment: 'Cortisone Injection', duration: '1 session', outcome: 'Temporary relief' },
+      { date: '2024-01-05', treatment: 'NSAIDs', duration: 'Ongoing', outcome: 'Partial relief' },
+    ]
   };
 
   return (
     <div className="space-y-6">
       {/* Extracted Information */}
       <div className="bg-white rounded-xl p-6 border border-slate-200">
-        <h2 className="text-lg font-semibold text-slate-900 mb-4">Extracted Information</h2>
+        <h2 className="text-lg font-semibold text-slate-900 mb-4">Extracted Claim Details</h2>
         {extractedData ? (
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-4">
@@ -258,7 +282,7 @@ function Step2Extraction({ extractedData }: any) {
                 <p className="font-mono font-semibold text-slate-900">{extractedData.icd10}</p>
               </div>
               <div className="p-4 bg-slate-50 rounded-lg">
-                <p className="text-sm text-slate-600 mb-1">Diagnosis</p>
+                <p className="text-sm text-slate-600 mb-1">Matched Diagnosis</p>
                 <p className="font-semibold text-slate-900">{extractedData.diagnosis}</p>
               </div>
             </div>
@@ -271,56 +295,69 @@ function Step2Extraction({ extractedData }: any) {
         )}
       </div>
 
-      {/* Policy Rules */}
-      <div className="bg-white rounded-xl p-6 border border-slate-200">
-        <h2 className="text-lg font-semibold text-slate-900 mb-4">
-          Insurance Policy Requirements - Blue Cross
-        </h2>
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 bg-blue-50 rounded-lg">
-              <p className="text-sm text-blue-700 mb-1">Maximum Approved</p>
-              <p className="text-xl font-bold text-blue-900">{policyRules.maxApproved}</p>
-            </div>
-            <div className="p-4 bg-purple-50 rounded-lg">
-              <p className="text-sm text-purple-700 mb-1">Processing Timeline</p>
-              <p className="text-xl font-bold text-purple-900">{policyRules.timeline}</p>
+      {/* Matched Evidence */}
+      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div className="p-6 border-b border-slate-200 bg-slate-50">
+          <h2 className="text-lg font-semibold text-slate-900">EHR Evidence Matched</h2>
+          <p className="text-sm text-slate-600 mt-1">Automatically collected supporting documentation</p>
+        </div>
+        
+        <div className="p-6 space-y-6">
+          {/* Diagnosis History */}
+          <div>
+            <h3 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              Diagnosis History
+            </h3>
+            <div className="space-y-2">
+              {ehrData.diagnosisHistory.map((record, idx) => (
+                <div key={idx} className="p-3 bg-slate-50 rounded-lg flex justify-between items-center">
+                  <div>
+                    <p className="font-medium text-slate-900">{record.diagnosis}</p>
+                    <p className="text-sm text-slate-600">ICD-10: {record.icd10}</p>
+                  </div>
+                  <span className="text-sm text-slate-500">{record.date}</span>
+                </div>
+              ))}
             </div>
           </div>
 
+          {/* Conservative Treatments */}
           <div>
-            <h3 className="font-semibold text-slate-900 mb-3">Required Documents</h3>
+            <h3 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              Prior Treatments (Medical Necessity)
+            </h3>
             <div className="space-y-2">
-              {policyRules.requiredDocs.map((doc, idx) => (
-                <div
-                  key={idx}
-                  className={`p-3 rounded-lg border ${
-                    doc.status === 'found'
-                      ? 'bg-green-50 border-green-200'
-                      : 'bg-red-50 border-red-200'
-                  }`}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-3">
-                      {doc.status === 'found' ? (
-                        <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
-                      ) : (
-                        <XCircle className="w-5 h-5 text-red-600 mt-0.5" />
-                      )}
-                      <div>
-                        <p className={`font-medium ${
-                          doc.status === 'found' ? 'text-green-900' : 'text-red-900'
-                        }`}>
-                          {doc.name}
-                        </p>
-                        <p className={`text-sm ${
-                          doc.status === 'found' ? 'text-green-700' : 'text-red-700'
-                        }`}>
-                          {doc.details}
-                        </p>
-                      </div>
-                    </div>
+              {ehrData.treatments.map((treatment, idx) => (
+                <div key={idx} className="p-3 border border-slate-200 rounded-lg flex justify-between items-center">
+                  <div>
+                    <p className="font-medium text-slate-900">{treatment.treatment}</p>
+                    <p className="text-sm text-slate-600">Outcome: {treatment.outcome}</p>
                   </div>
+                  <div className="text-right">
+                    <span className="text-sm font-medium text-slate-700 block">{treatment.duration}</span>
+                    <span className="text-xs text-slate-500">{treatment.date}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Lab Results */}
+          <div>
+            <h3 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              Relevant Lab Reports
+            </h3>
+            <div className="space-y-2">
+              {ehrData.labs.filter(l => l.relevant).map((lab, idx) => (
+                <div key={idx} className="p-3 bg-green-50 border border-green-200 rounded-lg flex justify-between items-center">
+                  <div>
+                    <p className="font-medium text-slate-900">{lab.test}</p>
+                    <p className="text-sm text-slate-600">Result: {lab.result}</p>
+                  </div>
+                  <span className="text-sm text-slate-500">{lab.date}</span>
                 </div>
               ))}
             </div>
@@ -331,134 +368,7 @@ function Step2Extraction({ extractedData }: any) {
   );
 }
 
-function Step3Evidence() {
-  const ehrData = {
-    diagnosisHistory: [
-      { date: '2022-05-10', diagnosis: 'Knee pain, right', icd10: 'M25.561' },
-      { date: '2023-03-22', diagnosis: 'Osteoarthritis, right knee', icd10: 'M17.11' },
-    ],
-    labs: [
-      { date: '2024-02-20', test: 'Complete Blood Count', result: 'Normal', relevant: true },
-      { date: '2024-02-20', test: 'ESR', result: '18 mm/hr', relevant: true },
-      { date: '2024-01-10', test: 'Lipid Panel', result: 'Normal', relevant: false },
-    ],
-    treatments: [
-      { date: '2023-04-01', treatment: 'Physical Therapy', duration: '6 months', outcome: 'Minimal improvement' },
-      { date: '2023-10-15', treatment: 'Cortisone Injection', duration: '1 session', outcome: 'Temporary relief' },
-      { date: '2024-01-05', treatment: 'NSAIDs', duration: 'Ongoing', outcome: 'Partial relief' },
-    ],
-    medications: [
-      'Ibuprofen 800mg TID',
-      'Acetaminophen 1000mg QID PRN',
-      'Meloxicam 15mg QD',
-    ],
-  };
-
-  return (
-    <div className="space-y-6">
-      {/* Evidence Summary */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl p-6 text-white">
-        <h2 className="text-xl font-semibold mb-2">Evidence Collection Complete</h2>
-        <p className="text-blue-100">
-          AI has automatically extracted and mapped supporting evidence from the patient's EHR
-        </p>
-        <div className="grid grid-cols-4 gap-4 mt-6">
-          <div className="bg-white/10 rounded-lg p-3 backdrop-blur">
-            <p className="text-2xl font-bold">2</p>
-            <p className="text-sm text-blue-100">Diagnosis Records</p>
-          </div>
-          <div className="bg-white/10 rounded-lg p-3 backdrop-blur">
-            <p className="text-2xl font-bold">5</p>
-            <p className="text-sm text-blue-100">Lab Reports</p>
-          </div>
-          <div className="bg-white/10 rounded-lg p-3 backdrop-blur">
-            <p className="text-2xl font-bold">3</p>
-            <p className="text-sm text-blue-100">Prior Treatments</p>
-          </div>
-          <div className="bg-white/10 rounded-lg p-3 backdrop-blur">
-            <p className="text-2xl font-bold">3</p>
-            <p className="text-sm text-blue-100">Medications</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Diagnosis History */}
-      <div className="bg-white rounded-xl p-6 border border-slate-200">
-        <h3 className="font-semibold text-slate-900 mb-4">Diagnosis History</h3>
-        <div className="space-y-3">
-          {ehrData.diagnosisHistory.map((record, idx) => (
-            <div key={idx} className="p-3 bg-slate-50 rounded-lg">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-slate-900">{record.diagnosis}</p>
-                  <p className="text-sm text-slate-600">ICD-10: {record.icd10}</p>
-                </div>
-                <span className="text-sm text-slate-500">{record.date}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Conservative Treatments */}
-      <div className="bg-white rounded-xl p-6 border border-slate-200">
-        <h3 className="font-semibold text-slate-900 mb-4">
-          Prior Conservative Treatments <span className="text-green-600">(Medical Necessity Demonstrated)</span>
-        </h3>
-        <div className="space-y-3">
-          {ehrData.treatments.map((treatment, idx) => (
-            <div key={idx} className="p-4 border border-slate-200 rounded-lg">
-              <div className="flex items-start justify-between mb-2">
-                <h4 className="font-medium text-slate-900">{treatment.treatment}</h4>
-                <span className="text-sm text-slate-500">{treatment.date}</span>
-              </div>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-slate-600">Duration: </span>
-                  <span className="font-medium text-slate-900">{treatment.duration}</span>
-                </div>
-                <div>
-                  <span className="text-slate-600">Outcome: </span>
-                  <span className="font-medium text-slate-900">{treatment.outcome}</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Lab Results */}
-      <div className="bg-white rounded-xl p-6 border border-slate-200">
-        <h3 className="font-semibold text-slate-900 mb-4">Relevant Lab Reports</h3>
-        <div className="space-y-2">
-          {ehrData.labs.map((lab, idx) => (
-            <div
-              key={idx}
-              className={`p-3 rounded-lg ${
-                lab.relevant ? 'bg-green-50 border border-green-200' : 'bg-slate-50'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-slate-900">{lab.test}</p>
-                  <p className="text-sm text-slate-600">Result: {lab.result}</p>
-                </div>
-                <div className="text-right">
-                  <span className="text-sm text-slate-500">{lab.date}</span>
-                  {lab.relevant && (
-                    <p className="text-xs text-green-700 font-medium mt-1">✓ Included</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Step4Review() {
+function Step3Dashboard() {
   const riskScore = {
     level: 'low',
     score: 85,
